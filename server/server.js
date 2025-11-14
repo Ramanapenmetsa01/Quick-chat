@@ -16,8 +16,13 @@ const PORT=process.env.PORT || 5000
 // Initialize socket.io
 export const io=new Server(server,{
     cors:{
-        origin: process.env.CLIENT_URL || "http://localhost:5173",
-        credentials: true
+        origin: [
+            process.env.CLIENT_URL || "http://localhost:5173",
+            "https://quick-chat-bay.vercel.app",
+            "http://localhost:5173"
+        ],
+        credentials: true,
+        methods: ['GET', 'POST']
     }
 })
 
@@ -45,8 +50,14 @@ io.on("connection",(socket)=>{
 // middleware setup
 app.use(express.json({limit:"4mb"}));
 app.use(cors({
-    origin: process.env.CLIENT_URL || "http://localhost:5173",
-    credentials: true
+    origin: [
+        process.env.CLIENT_URL || "http://localhost:5173",
+        "https://quick-chat-bay.vercel.app",
+        "http://localhost:5173"
+    ],
+    credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization']
 }))
 
 
