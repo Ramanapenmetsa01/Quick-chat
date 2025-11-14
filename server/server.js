@@ -15,7 +15,10 @@ const PORT=process.env.PORT || 5000
 
 // Initialize socket.io
 export const io=new Server(server,{
-    cors:{origin:"*"}
+    cors:{
+        origin: process.env.CLIENT_URL || "http://localhost:5173",
+        credentials: true
+    }
 })
 
 //store online users
@@ -41,7 +44,10 @@ io.on("connection",(socket)=>{
 })
 // middleware setup
 app.use(express.json({limit:"4mb"}));
-app.use(cors())
+app.use(cors({
+    origin: process.env.CLIENT_URL || "http://localhost:5173",
+    credentials: true
+}))
 
 
 // Connect database
