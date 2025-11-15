@@ -67,7 +67,7 @@ const CallPage = () => {
               playsInline
               webkit-playsinline="true"
               muted={false}
-              className='w-full h-full object-cover'
+              className='w-full h-full object-contain'
             />
             {/* Show overlay when remote user pauses video */}
             {remoteVideoMuted && (
@@ -90,16 +90,17 @@ const CallPage = () => {
           </div>
         )}
 
+
         {/* Local Video - Small preview (bottom right) */}
         {callState.callType === 'video' && (
-          <div className='absolute bottom-24 right-6 w-40 h-52 bg-gray-800 rounded-lg overflow-hidden shadow-2xl border-2 border-white/20'>
+          <div className='absolute bottom-36 right-4 w-32 h-40 md:w-40 md:h-52 md:right-6 bg-gray-800 rounded-lg overflow-hidden shadow-2xl border-2 border-white/20 z-40'>
             <video
               ref={localVideoRef}
               autoPlay
               playsInline
               webkit-playsinline="true"
               muted
-              className='w-full h-full object-cover'
+              className='w-full h-full object-contain'
             />
             {callControls.isVideoMuted && (
               <div className='absolute inset-0 bg-gray-900 flex items-center justify-center'>
@@ -125,53 +126,55 @@ const CallPage = () => {
       </div>
 
       {/* Call Controls - Bottom */}
-      <div className='bg-gray-900/95 backdrop-blur-md py-6 px-6'>
-        <div className='max-w-md mx-auto flex items-center justify-center gap-6'>
-          {/* Mute/Unmute Audio */}
-          <button
-            onClick={toggleAudio}
-            className={`w-14 h-14 rounded-full flex items-center justify-center transition-all ${
-              callControls.isAudioMuted
-                ? 'bg-red-500 hover:bg-red-600'
-                : 'bg-gray-700 hover:bg-gray-600'
-            }`}
-          >
-            {callControls.isAudioMuted ? (
-              <FaMicrophoneSlash size={24} className='text-white' />
-            ) : (
-              <FaMicrophone size={24} className='text-white' />
-            )}
-          </button>
-
-          {/* End Call */}
-          <button
-            onClick={endCall}
-            className='w-16 h-16 rounded-full bg-red-500 hover:bg-red-600 flex items-center justify-center transition-all shadow-lg'
-          >
-            <FaPhoneSlash size={28} className='text-white' />
-          </button>
-
-          {/* Mute/Unmute Video (only for video calls) */}
-          {callState.callType === 'video' && (
+      <div className='fixed bottom-0 left-0 right-0 z-50 flex items-center justify-center pb-2'>
+        <div className='bg-black/10 backdrop-blur-sm rounded-full px-4 py-2 shadow-2xl'>
+          <div className='flex items-center justify-center gap-4'>
+            {/* Mute/Unmute Audio */}
             <button
-              onClick={toggleVideo}
-              className={`w-14 h-14 rounded-full flex items-center justify-center transition-all ${
-                callControls.isVideoMuted
+              onClick={toggleAudio}
+              className={`w-12 h-12 rounded-full flex items-center justify-center transition-all transform hover:scale-110 active:scale-95 shadow-2xl ${
+                callControls.isAudioMuted
                   ? 'bg-red-500 hover:bg-red-600'
-                  : 'bg-gray-700 hover:bg-gray-600'
+                  : 'bg-white/20 hover:bg-white/30 backdrop-blur-md'
               }`}
             >
-              {callControls.isVideoMuted ? (
-                <FaVideoSlash size={24} className='text-white' />
+              {callControls.isAudioMuted ? (
+                <FaMicrophoneSlash size={26} className='text-white' />
               ) : (
-                <FaVideo size={24} className='text-white' />
+                <FaMicrophone size={26} className='text-white' />
               )}
             </button>
-          )}
+
+            {/* End Call */}
+            <button
+              onClick={endCall}
+              className='w-20 h-20 rounded-full bg-red-600 hover:bg-red-700 flex items-center justify-center transition-all transform hover:scale-110 active:scale-95 shadow-2xl shadow-red-600/50'
+            >
+              <FaPhoneSlash size={32} className='text-white rotate-135' />
+            </button>
+
+            {/* Mute/Unmute Video (only for video calls) */}
+            {callState.callType === 'video' && (
+              <button
+                onClick={toggleVideo}
+                className={`w-16 h-16 rounded-full flex items-center justify-center transition-all transform hover:scale-110 active:scale-95 shadow-2xl ${
+                  callControls.isVideoMuted
+                    ? 'bg-red-500 hover:bg-red-600'
+                    : 'bg-white/20 hover:bg-white/30 backdrop-blur-md'
+                }`}
+              >
+                {callControls.isVideoMuted ? (
+                  <FaVideoSlash size={26} className='text-white' />
+                ) : (
+                  <FaVideo size={26} className='text-white' />
+                )}
+              </button>
+            )}
+          </div>
         </div>
       </div>
     </div>
   );
 };
 
-export default CallPage;
+export default CallPage;   

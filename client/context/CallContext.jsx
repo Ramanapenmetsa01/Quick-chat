@@ -151,9 +151,10 @@ export const CallProvider = ({ children }) => {
           autoGainControl: true,
         },
         video: callType === 'video' ? {
-          width: { ideal: 1280, max: 1920 },
-          height: { ideal: 720, max: 1080 },
+          width: { min: 640, ideal: 1280, max: 1920 },
+          height: { min: 480, ideal: 720, max: 1080 },
           facingMode: 'user',
+          frameRate: { ideal: 30, max: 30 },
         } : false,
       };
       
@@ -202,11 +203,29 @@ export const CallProvider = ({ children }) => {
       peerConnectionRef.current.ontrack = (event) => {
         if (remoteVideoRef.current) {
           remoteVideoRef.current.srcObject = event.streams[0];
+          // Force play for mobile devices
+          setTimeout(() => {
+            if (remoteVideoRef.current) {
+              remoteVideoRef.current.play().catch(err => console.log('Remote play error:', err));
+            }
+          }, 100);
+        }
+      };
+      
+      // Monitor connection state
+      peerConnectionRef.current.onconnectionstatechange = () => {
+        console.log('Connection state:', peerConnectionRef.current.connectionState);
+        if (peerConnectionRef.current.connectionState === 'failed') {
+          toast.error('Connection failed. Please try again.');
         }
       };
 
-      // Create offer
-      const offer = await peerConnectionRef.current.createOffer();
+      // Create offer with proper options
+      const offerOptions = {
+        offerToReceiveAudio: true,
+        offerToReceiveVideo: callType === 'video',
+      };
+      const offer = await peerConnectionRef.current.createOffer(offerOptions);
       await peerConnectionRef.current.setLocalDescription(offer);
 
       // Send call signal
@@ -254,9 +273,10 @@ export const CallProvider = ({ children }) => {
           autoGainControl: true,
         },
         video: callState.callType === 'video' ? {
-          width: { ideal: 1280, max: 1920 },
-          height: { ideal: 720, max: 1080 },
+          width: { min: 640, ideal: 1280, max: 1920 },
+          height: { min: 480, ideal: 720, max: 1080 },
           facingMode: 'user',
+          frameRate: { ideal: 30, max: 30 },
         } : false,
       };
       
@@ -301,6 +321,20 @@ export const CallProvider = ({ children }) => {
       peerConnectionRef.current.ontrack = (event) => {
         if (remoteVideoRef.current) {
           remoteVideoRef.current.srcObject = event.streams[0];
+          // Force play for mobile devices
+          setTimeout(() => {
+            if (remoteVideoRef.current) {
+              remoteVideoRef.current.play().catch(err => console.log('Remote play error:', err));
+            }
+          }, 100);
+        }
+      };
+      
+      // Monitor connection state
+      peerConnectionRef.current.onconnectionstatechange = () => {
+        console.log('Connection state:', peerConnectionRef.current.connectionState);
+        if (peerConnectionRef.current.connectionState === 'failed') {
+          toast.error('Connection failed. Please try again.');
         }
       };
 
