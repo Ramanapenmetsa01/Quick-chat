@@ -20,6 +20,18 @@ const messageSchema= new mongoose.Schema({
     seen:{
         type:Boolean,
         default:false
+    },
+    messageType:{
+        type:String,
+        enum:['text','image','call'],
+        default:'text'
+    },
+    callType:{
+        type:String,
+        enum:['audio','video']
+    },
+    duration:{
+        type:String
     }
 },{timestamps:true})
 

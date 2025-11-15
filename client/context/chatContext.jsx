@@ -13,7 +13,6 @@ export const ChatProvider=({children})=>{
     const getUsers=async()=>{
         try {
             const {data}=await axios.get('/api/messages/friendUsers')
-            console.log(data)
             if(data.success){
                 setUsers(data.users)
                 setUnseenMessages(data.unseenMessages)

@@ -4,11 +4,14 @@ import App from './App.jsx'
 import { BrowserRouter } from 'react-router-dom'
 import { AuthProvider } from '../context/AuthContext.jsx'
 import { ChatProvider } from '../context/chatContext.jsx'
+import { CallProvider } from '../context/CallContext.jsx'
 createRoot(document.getElementById('root')).render(
   <BrowserRouter>
     <AuthProvider>
       <ChatProvider>
-        <App />
+        <CallProvider>
+          <App />
+        </CallProvider>
       </ChatProvider>
     </AuthProvider>
 

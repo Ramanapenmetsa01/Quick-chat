@@ -5,6 +5,7 @@ import http from "http";
 import  ConnectDB  from "./lib/db.js";
 import userRouter from "./routes/userRoutes.js";
 import messageRouter from "./routes/messageRoutes.js";
+import Message from "./models/message.js";
 import {Server} from 'socket.io'
 // create Express app and HTTP server
 const app=express()
@@ -46,6 +47,81 @@ io.on("connection",(socket)=>{
         delete userSocketMap[userId]
         io.emit("getOnlineUsers",Object.keys(userSocketMap))
     })
+
+    // Call signaling events
+    socket.on("callUser", ({ receiverId, offer, callType, callerInfo }) => {
+        const receiverSocketId = userSocketMap[receiverId];
+        if (receiverSocketId) {
+            io.to(receiverSocketId).emit("incomingCall", {
+                offer,
+                callType,
+                callerInfo
+            });
+        }
+    });
+
+    socket.on("answerCall", ({ callerId, answer }) => {
+        const callerSocketId = userSocketMap[callerId];
+        if (callerSocketId) {
+            io.to(callerSocketId).emit("callAccepted", { answer });
+        }
+    });
+
+    socket.on("iceCandidate", ({ targetUserId, candidate }) => {
+        const targetSocketId = userSocketMap[targetUserId];
+        if (targetSocketId) {
+            io.to(targetSocketId).emit("iceCandidate", { candidate });
+        }
+    });
+
+    socket.on("rejectCall", ({ callerId }) => {
+        const callerSocketId = userSocketMap[callerId];
+        if (callerSocketId) {
+            io.to(callerSocketId).emit("callRejected");
+        }
+    });
+
+    socket.on("endCall", ({ targetUserId }) => {
+        const targetSocketId = userSocketMap[targetUserId];
+        if (targetSocketId) {
+            io.to(targetSocketId).emit("callEnded");
+        }
+    });
+
+    socket.on("videoMuteStatus", ({ targetUserId, isMuted }) => {
+        const targetSocketId = userSocketMap[targetUserId];
+        if (targetSocketId) {
+            io.to(targetSocketId).emit("videoMuteStatus", { isMuted });
+        }
+    });
+
+    socket.on("saveCallLog", async ({ type, callType, duration, status, receiverId }) => {
+        try {
+            const callMessage = new Message({
+                senderId: userId,
+                receiverId,
+                text: `${callType === 'video' ? '📹 Video' : '📞 Audio'} call ${status} - ${duration}`,
+                messageType: 'call',
+                callType,
+                duration,
+            });
+            
+            await callMessage.save();
+            
+            // Emit to both users if they are online
+            const senderSocketId = userSocketMap[userId];
+            const receiverSocketId = userSocketMap[receiverId];
+            
+            if (senderSocketId) {
+                io.to(senderSocketId).emit("newMessage", callMessage);
+            }
+            if (receiverSocketId) {
+                io.to(receiverSocketId).emit("newMessage", callMessage);
+            }
+        } catch (error) {
+            console.error("Error saving call log:", error);
+        }
+    });
 })
 // middleware setup
 app.use(express.json({limit:"4mb"}));

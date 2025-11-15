@@ -1,20 +1,34 @@
 import React, { useContext, useEffect, useRef, useState } from 'react'
 
-import { FaInfo, FaAngleLeft, FaUserCircle } from "react-icons/fa";
+import { FaInfo, FaAngleLeft, FaUserCircle, FaPhone, FaVideo } from "react-icons/fa";
 import { MdPhotoLibrary } from "react-icons/md";
 import { IoSend } from "react-icons/io5";
 import assets from '../assets/assets';
 import { formatMessageTime } from '../lib/utils';
 import { ChatContext } from '../../context/chatContext';
 import { AuthContext } from '../../context/AuthContext';
+import { CallContext } from '../../context/CallContext';
 import toast from 'react-hot-toast';
 
 const ChatContainer = ({ setOpenRightSidebar }) => {
   const { messages, selectedUser, setSelectedUser,
     sendMessage, getMessages } = useContext(ChatContext)
   const { authUser, onlineUsers } = useContext(AuthContext)
+  const { initiateCall } = useContext(CallContext)
   const [input, setInput] = useState("")
   const scrollEnd = useRef()
+  
+  const handleVideoCall = () => {
+    if (selectedUser) {
+      initiateCall(selectedUser, 'video')
+    }
+  }
+
+  const handleAudioCall = () => {
+    if (selectedUser) {
+      initiateCall(selectedUser, 'audio')
+    }
+  }
   const handleSendMessage = async (e) => {
     e.preventDefault()
     if (input.trim() === "") return null;
@@ -62,6 +76,26 @@ const ChatContainer = ({ setOpenRightSidebar }) => {
           {selectedUser.fullName}
           {onlineUsers.includes(selectedUser._id) && <span className='w-2 h-2 rounded-full bg-green-500'></span>}
         </p>
+
+        {/* Call Icons */}
+        <FaVideo
+          onClick={(e) => {
+            e.stopPropagation();
+            handleVideoCall();
+          }}
+          size={20}
+          className="text-white hover:text-violet-400 cursor-pointer transition-colors"
+          title="Video Call"
+        />
+        <FaPhone
+          onClick={(e) => {
+            e.stopPropagation();
+            handleAudioCall();
+          }}
+          size={18}
+          className="text-white hover:text-violet-400 cursor-pointer transition-colors"
+          title="Audio Call"
+        />
 
         <FaAngleLeft
           onClick={(e) => {
