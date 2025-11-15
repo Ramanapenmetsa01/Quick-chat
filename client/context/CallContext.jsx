@@ -38,12 +38,17 @@ export const CallProvider = ({ children }) => {
   const localStreamRef = useRef(null);
   const peerConnectionRef = useRef(null);
 
-  // ICE servers configuration for WebRTC
+  // ICE servers configuration for WebRTC (including TURN for mobile/firewall)
   const configuration = {
     iceServers: [
       { urls: 'stun:stun.l.google.com:19302' },
       { urls: 'stun:stun1.l.google.com:19302' },
+      { urls: 'stun:stun2.l.google.com:19302' },
+      { urls: 'stun:stun3.l.google.com:19302' },
+      { urls: 'stun:stun4.l.google.com:19302' },
     ],
+    iceTransportPolicy: 'all',
+    iceCandidatePoolSize: 10,
   };
 
   // Set video streams when refs are available
@@ -138,11 +143,21 @@ export const CallProvider = ({ children }) => {
 
   const initiateCall = async (receiverInfo, callType) => {
     try {
-      // Get user media first before setting state
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: callType === 'video',
-        audio: true,
-      });
+      // Get user media first before setting state with mobile-friendly constraints
+      const constraints = {
+        audio: {
+          echoCancellation: true,
+          noiseSuppression: true,
+          autoGainControl: true,
+        },
+        video: callType === 'video' ? {
+          width: { ideal: 1280, max: 1920 },
+          height: { ideal: 720, max: 1080 },
+          facingMode: 'user',
+        } : false,
+      };
+      
+      const stream = await navigator.mediaDevices.getUserMedia(constraints);
 
       localStreamRef.current = stream;
 
@@ -231,11 +246,21 @@ export const CallProvider = ({ children }) => {
 
   const acceptCall = async () => {
     try {
-      // Get user media first before updating state
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: callState.callType === 'video',
-        audio: true,
-      });
+      // Get user media first before updating state with mobile-friendly constraints
+      const constraints = {
+        audio: {
+          echoCancellation: true,
+          noiseSuppression: true,
+          autoGainControl: true,
+        },
+        video: callState.callType === 'video' ? {
+          width: { ideal: 1280, max: 1920 },
+          height: { ideal: 720, max: 1080 },
+          facingMode: 'user',
+        } : false,
+      };
+      
+      const stream = await navigator.mediaDevices.getUserMedia(constraints);
 
       localStreamRef.current = stream;
       

@@ -15,6 +15,30 @@ const CallPage = () => {
     formatDuration,
   } = useContext(CallContext);
 
+  // Force play on mobile devices
+  useEffect(() => {
+    const playVideo = async () => {
+      try {
+        if (remoteVideoRef.current) {
+          await remoteVideoRef.current.play().catch(err => {
+            console.log('Autoplay prevented, attempting with user interaction:', err);
+          });
+        }
+        if (localVideoRef.current && callState.callType === 'video') {
+          await localVideoRef.current.play().catch(err => {
+            console.log('Local video autoplay prevented:', err);
+          });
+        }
+      } catch (error) {
+        console.log('Video play error:', error);
+      }
+    };
+
+    if (callState.isCallActive) {
+      playVideo();
+    }
+  }, [callState.isCallActive, remoteVideoRef, localVideoRef, callState.callType]);
+
   if (!callState.isCallActive) {
     return null;
   }
@@ -25,7 +49,12 @@ const CallPage = () => {
     <div className='fixed inset-0 bg-black z-50 flex flex-col'>
       {/* Hidden audio element for audio calls */}
       {callState.callType === 'audio' && (
-        <audio ref={remoteVideoRef} autoPlay playsInline />
+        <audio 
+          ref={remoteVideoRef} 
+          autoPlay 
+          playsInline 
+          webkit-playsinline="true"
+        />
       )}
       
       {/* Remote Video - Full Screen */}
@@ -36,6 +65,8 @@ const CallPage = () => {
               ref={remoteVideoRef}
               autoPlay
               playsInline
+              webkit-playsinline="true"
+              muted={false}
               className='w-full h-full object-cover'
             />
             {/* Show overlay when remote user pauses video */}
@@ -66,6 +97,7 @@ const CallPage = () => {
               ref={localVideoRef}
               autoPlay
               playsInline
+              webkit-playsinline="true"
               muted
               className='w-full h-full object-cover'
             />
