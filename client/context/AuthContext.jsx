@@ -22,6 +22,7 @@ export const AuthProvider = ({ children }) => {
                 connectSocket(response.data.user)
             }
         } catch (error) {
+            toast.dismiss()
             toast.error(error.message)
         }
     }
@@ -59,8 +60,10 @@ export const AuthProvider = ({ children }) => {
                 toast.success("profile Updated succesfully")
             }
         } catch (error) {
+            toast.dismiss()
             toast.error(error.message)
         }finally{
+            toast.dismiss()
              toast.dismiss(loadingToast);
         }
     }
@@ -76,9 +79,11 @@ export const AuthProvider = ({ children }) => {
                     localStorage.setItem("token",response.data.token)
                     toast.success(response.data.message)
                 }else{
+                    toast.dismiss()
                     toast.error(response.data.message)
                 }
             } catch (error) {
+                toast.dismiss()
                 toast.error(error.message)
             }
     }

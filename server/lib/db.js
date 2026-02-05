@@ -1,16 +1,23 @@
 import mongoose from "mongoose";
 
- const ConnectDB = async () => {
+const ConnectDB = async () => {
+  if (mongoose.connection.readyState === 1) {
+    return;
+  }
+
   try {
-     mongoose.connection.on("connected", () => {
-      console.log("MongoDB connected");
-    });
+    await mongoose.connect(
+      `${process.env.MONGODB_URL}/chat-app`,
+      {
+        serverSelectionTimeoutMS: 5000,
+      }
+    );
 
-    await mongoose.connect(`${process.env.MONGODB_URL}/chat-app`);
-
-   
+    console.log("MongoDB connected");
   } catch (error) {
-    console.log("MongoDB Error:", error);
+    console.error("MongoDB Error:", error);
+    process.exit(1);
   }
 };
-export default ConnectDB
+
+export default ConnectDB;
