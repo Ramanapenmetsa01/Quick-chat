@@ -1,22 +1,25 @@
 import { createContext, useContext, useEffect, useState } from "react";
 import { AuthContext } from "./AuthContext";
 import toast from "react-hot-toast";
-export const ChatContext=createContext()
-export const ChatProvider=({children})=>{
-    const [messages,setMessages]=useState([])
-    const [users,setUsers]=useState([])
-    const [selectedUser,setSelectedUser]=useState(null)
-    const [unseenMessages,setUnseenMessages]=useState({})
-    const {axios,socket}=useContext(AuthContext)
+import { encryptMessage, decryptMessage } from "../utils/crypto";
+
+
+export const ChatContext = createContext()
+export const ChatProvider = ({ children }) => {
+    const [messages, setMessages] = useState([])
+    const [users, setUsers] = useState([])
+    const [selectedUser, setSelectedUser] = useState(null)
+    const [unseenMessages, setUnseenMessages] = useState({})
+    const { axios, socket, authUser } = useContext(AuthContext)
 
     //function to get all users for sidebars
-    const getUsers=async()=>{
+    const getUsers = async () => {
         try {
-            const {data}=await axios.get('/api/messages/friendUsers')
-            if(data.success){
+            const { data } = await axios.get('/api/messages/friendUsers')
+            if (data.success) {
                 setUsers(data.users)
                 setUnseenMessages(data.unseenMessages)
-            }else{
+            } else {
                 toast.error(data.message)
             }
         } catch (error) {
@@ -25,60 +28,137 @@ export const ChatProvider=({children})=>{
     }
 
     // function to get messages for selected user
-    const getMessages=async(userId)=>{
-        try{
-            const {data}=await axios.get(`/api/messages/${userId}`)
-            if(data.success){
-                setMessages(data.messages)
-            }else{
-                toast.error(data.message)
+    const getMessages = async (userId) => {
+        try {
+            const privateKey = sessionStorage.getItem("privateKey");
+            const { data } = await axios.get(`/api/messages/${userId}`);
+            if (data.success) {
+                const decryptedMessages = data.messages.map(msg => {
+
+                    // decrypt only text messages
+                    if (msg.text && msg.nonce) {
+                        const senderPublicKey = selectedUser.publicKey;
+                        const decryptedText = decryptMessage(
+                            msg.text,
+                            msg.nonce,
+                            senderPublicKey,
+                            privateKey
+                        );
+
+                        return {
+                            ...msg,
+                            text: decryptedText
+                        };
+                    }
+                    return msg;
+                });
+                setMessages(decryptedMessages);
+            } else {
+                toast.error(data.message);
             }
-        }catch(error){
-            toast.error(error.messages)
+        } catch (error) {
+            toast.error(error.message);
         }
-    }
+    };
+
 
     // function to send mesasage to selected user
-    const sendMessage=async(messageData)=>{
+    const sendMessage = async (messageData) => {
         try {
-            const {data}=await axios.post(`/api/messages/send/${selectedUser._id}`,messageData)
-            if(data.success){
-                setMessages(prev=>[...prev,data.newMessage])
-            }else{
+            const privateKey = sessionStorage.getItem("privateKey");
+
+            let payload = {};
+
+            // encrypt text message
+            if (messageData.text) {
+                const { encryptedMessage, nonce } = encryptMessage(
+                    messageData.text,
+                    selectedUser.publicKey,
+                    privateKey
+                );
+                payload.text = encryptedMessage;
+                payload.nonce = nonce;
+            }
+            if (messageData.image) {
+                payload.image = messageData.image;
+            }
+            const { data } = await axios.post(
+                `/api/messages/send/${selectedUser._id}`,
+                payload
+            );
+
+            if (data.success) {
+
+                const newMessage = data.newMessage;
+
+                // decrypt before displaying
+                if (newMessage.text && newMessage.nonce) {
+
+                    const privateKey = sessionStorage.getItem("privateKey");
+
+                    const decryptedText = decryptMessage(
+                        newMessage.text,
+                        newMessage.nonce,
+                        selectedUser.publicKey,
+                        privateKey
+                    );
+
+                    newMessage.text = decryptedText;
+                }
+
+                setMessages(prev => [...prev, newMessage]);
+            }
+            else {
                 toast.error(data.message)
             }
         } catch (error) {
             toast.error(error.messages)
-            
+
         }
     }
 
     //function to subscribe to messages for selected user instantly with socket
-    const subscribeToMessages=async () => {
-        if(!socket) return
-        socket.on("newMessage",(newMessage)=>{
-            if(selectedUser && newMessage.senderId===selectedUser._id){
-                newMessage.seen=true
-                setMessages(prev=>[...prev,newMessage]);
+    const subscribeToMessages = async () => {
+        if (!socket) return
+        socket.on("newMessage", (newMessage) => {
+            const privateKey = sessionStorage.getItem("privateKey");
+
+        // decrypt live incoming message
+        if (newMessage.text && newMessage.nonce && privateKey && selectedUser) {
+
+            const decryptedText = decryptMessage(
+                newMessage.text,
+                newMessage.nonce,
+                selectedUser.publicKey,
+                privateKey
+            );
+
+            newMessage.text = decryptedText;
+        }
+
+            if (selectedUser && newMessage.senderId === selectedUser._id) {
+                newMessage.seen = true
+                
+                setMessages(prev => [...prev, newMessage]);
                 axios.put(`/api/messages/mark/${newMessage._id}`)
-            }else{
-                setUnseenMessages((prev)=>({
-                    ...prev,[newMessage.senderId]:prev[newMessage.senderId]?prev[newMessage.senderId]+1:1
+            } else {
+                setUnseenMessages((prev) => ({
+                    ...prev, [newMessage.senderId]: prev[newMessage.senderId] ? prev[newMessage.senderId] + 1 : 1
                 }))
             }
         })
     }
 
     //function to unsubcribe from messages
-    const unsubcribeFromMessages=()=>{
-        if(socket) socket.off("newMessage")
+    const unsubcribeFromMessages = () => {
+        if (socket) socket.off("newMessage")
     }
 
-    useEffect(()=>{
+    useEffect(() => {
         subscribeToMessages()
-        return ()=>unsubcribeFromMessages()
-    },[socket,selectedUser])
-    const value={
+        return () => unsubcribeFromMessages()
+    }, [socket, selectedUser])
+    const value = {
         messages,
         users,
         selectedUser,
@@ -90,7 +170,7 @@ export const ChatProvider=({children})=>{
         setUnseenMessages,
         getMessages
     }
-    return(
+    return (
         <ChatContext.Provider value={value}>
             {children}
         </ChatContext.Provider>

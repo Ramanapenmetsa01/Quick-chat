@@ -30,11 +30,8 @@ const AddFriendPage = ({ onClose }) => {
         // If it's page 1 or new search, replace users; otherwise append
         if (pageNum === 1) {
           setUsers(newUsers)
-          console.log(response.data)
           setRequestedList(new Set(authUser.outgoingRequests))
           setAddedFriends(new Set(authUser.friends))
-          console.log("myid", authUser._id)
-          console.log(authUser.outgoingRequests)
         } else {
           setUsers(prev => [...prev, ...newUsers])
         }

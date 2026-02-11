@@ -29,6 +29,24 @@ const userSchema = new mongoose.Schema({
         type: mongoose.Schema.Types.ObjectId,
         ref: "User"
     }],
+     publicKey: {
+        type: String,
+        required: true
+    },
+
+    encryptedPrivateKey: {
+        type: String,
+        required: true
+    },
+     salt: {
+        type: String,
+        required: true
+    },
+
+    iv: {
+        type: String,
+        required: true
+    },
     outgoingRequests: [{
         type: mongoose.Schema.Types.ObjectId,
         ref: "User"

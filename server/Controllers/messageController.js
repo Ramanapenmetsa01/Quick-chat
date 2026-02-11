@@ -8,7 +8,7 @@ import { io, userSocketMap } from '../server.js'
 export const getUsersForSidebar = async (req, res) => {
     try {
         const userId = req.user._id;
-        const user = await User.findById(userId).populate("friends", "fullName profilePic bio").select("friends");
+        const user = await User.findById(userId).populate("friends", "fullName profilePic bio publicKey").select("friends");
         const unseenMessages = {}
         const promises = user.friends.map(async (friendId) => {
             const messages = await Message.find({ senderId: friendId, receiverId: userId, seen: false })
@@ -59,7 +59,7 @@ export const markMessageAsSeen = async (req, res) => {
 // send message to selected user
 export const sendMessage = async (req, res) => {
     try {
-        const { text, image } = req.body
+        const { text, image,nonce } = req.body
         const receiverId = req.params.id
         const senderId = req.user._id
         let imageUrl;
@@ -67,7 +67,7 @@ export const sendMessage = async (req, res) => {
             const uploadResponse = await cloudinary.uploader.upload(image)
             imageUrl = uploadResponse.secure_url
         }
-        const newMessage = await Message.create({ senderId, receiverId, text, image: imageUrl })
+        const newMessage = await Message.create({ senderId, receiverId, text, image: imageUrl,nonce })
         // Emit the new message to the receivers socket
         const receiverSocketId = userSocketMap[receiverId];
         if (receiverSocketId) {

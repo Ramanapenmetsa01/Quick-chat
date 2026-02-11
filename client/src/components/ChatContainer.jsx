@@ -16,6 +16,7 @@ const ChatContainer = ({ setOpenRightSidebar }) => {
   const { authUser, onlineUsers } = useContext(AuthContext)
   const { initiateCall } = useContext(CallContext)
   const [input, setInput] = useState("")
+  const [isLoadingMessages, setIsLoadingMessages] = useState(false)
   const scrollEnd = useRef()
   
   const handleVideoCall = () => {
@@ -58,9 +59,14 @@ const ChatContainer = ({ setOpenRightSidebar }) => {
   }, [messages])
 
   useEffect(()=>{
-    if(selectedUser){
-      getMessages(selectedUser._id)
+    const fetchMessages = async () => {
+      if(selectedUser){
+        setIsLoadingMessages(true)
+        await getMessages(selectedUser._id)
+        setIsLoadingMessages(false)
+      }
     }
+    fetchMessages()
   },[selectedUser])
 
   return selectedUser ? (
@@ -113,8 +119,23 @@ const ChatContainer = ({ setOpenRightSidebar }) => {
       {/* ---chat area--- */}
       <div className='flex flex-col h-[calc(100%-120px)] overflow-y-scroll p-3 pb-6'>
 
-
-        {messages.map((msg, index) => (
+        {isLoadingMessages ? (
+          <div className='flex items-center justify-center h-full'>
+            <div className='flex flex-col items-center gap-2'>
+              <div className='w-12 h-12 border-4 border-violet-500/30 border-t-violet-500 rounded-full animate-spin'></div>
+              <p className='text-gray-400 text-sm'>Loading messages...</p>
+            </div>
+          </div>
+        ) : messages.length === 0 ? (
+          <div className='flex items-center justify-center h-full'>
+            <div className='flex flex-col items-center gap-2 text-center px-4'>
+              <div className='text-6xl mb-2'>💬</div>
+              <p className='text-white text-lg font-medium'>No messages yet</p>
+              <p className='text-gray-400 text-sm'>Start the conversation by sending a message below!</p>
+            </div>
+          </div>
+        ) : (
+          messages.map((msg, index) => (
           <div key={index} className={`flex items-end gap-2 justify-end ${msg.senderId !== authUser._id && 'flex-row-reverse'}`}>
             {msg.image ? (
               <img src={msg.image} alt="" className='max-w-[230px] border border-gray-700 rounded-lg overflow-hidden mb-8' />
@@ -135,7 +156,8 @@ const ChatContainer = ({ setOpenRightSidebar }) => {
 
             </div>
           </div>
-        ))}
+        ))
+        )}
         <div ref={scrollEnd}></div>
       </div>
       {/* ---bottom area--- */}
