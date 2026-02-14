@@ -4,7 +4,7 @@ import { AuthContext } from '../../context/AuthContext';
 import toast from 'react-hot-toast';
 
 const RequestsPage = ({ onClose }) => {
-  const { axios } = useContext(AuthContext);
+  const { axios, socket } = useContext(AuthContext);
   const [requests, setRequests] = useState([]);
   const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(false);
@@ -45,6 +45,32 @@ const RequestsPage = ({ onClose }) => {
   useEffect(() => {
     fetchRequests(1);
   }, []);
+  // REALTIME: listen for new friend requests
+  useEffect(() => {
+    if (!socket) return;
+    const handleNewRequest = (newRequest) => {
+      setRequests(prev => {
+        const exists = prev.some(req => req._id === newRequest._id);
+        if (exists) return prev;
+        return [newRequest, ...prev];
+      });
+    };
+  const handleRemoveRequest = ({ senderId }) => {
+    setRequests(prev =>
+      prev.filter(req => req._id !== senderId)
+    );
+  };
+
+  socket.on("newFriendRequest", handleNewRequest);
+
+  socket.on("friendRequestRemoved", handleRemoveRequest);    
+
+    return () => {
+      socket.off("newFriendRequest", handleNewRequest);
+    };
+  }, [socket]);
+
+
 
   const handleScroll = (e) => {
     const { scrollTop, scrollHeight, clientHeight } = e.target;
@@ -89,7 +115,7 @@ const RequestsPage = ({ onClose }) => {
   return (
     <div className='fixed inset-0 flex items-center justify-center z-50 p-4'>
       <div className='bg-[#1a1625] border-2 border-gray-600 rounded-2xl w-full max-w-sm h-[70vh] flex flex-col overflow-hidden'>
-        
+
         {/* Header */}
         <div className='flex items-center justify-between p-5 border-b border-gray-600'>
           <h2 className='text-2xl font-semibold text-white'>Friend Requests</h2>

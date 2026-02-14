@@ -98,6 +98,20 @@ export const outgoingRequests = async (req, res) => {
         await User.findByIdAndUpdate(friendId, {
             $addToSet: { incomingRequests: myId }
         }); 
+         // GET sender info to send to frontend
+        const sender = await User.findById(myId)
+            .select("fullName profilePic bio")
+
+        // REALTIME EMIT
+        const receiverSocketId = userSocketMap[friendId.toString()]
+        if (receiverSocketId) {
+            io.to(receiverSocketId).emit("newFriendRequest", {
+                _id: sender._id,
+                fullName: sender.fullName,
+                profilePic: sender.profilePic,
+                bio: sender.bio
+            })
+        }
         res.json({ success: true })
 
     } catch (error) {
@@ -119,6 +133,15 @@ export const removeOutgoingRequests = async (req, res) => {
         await User.findByIdAndUpdate(friendId, {
             $pull: { incomingRequests: myId }
         }); 
+         const receiverSocketId = userSocketMap[friendId.toString()];
+
+        if (receiverSocketId) {
+
+            io.to(receiverSocketId).emit("friendRequestRemoved", {
+                senderId: myId.toString()
+            });
+
+        }
         res.json({ success: true })
 
     } catch (error) {
@@ -145,6 +168,22 @@ export const acceptRequests = async (req, res) => {
         await User.findByIdAndUpdate(friendId, {
             $addToSet: { friends: myId }
         });
+        const mySocketId = userSocketMap[myId.toString()]
+        const friendSocketId = userSocketMap[friendId.toString()]
+
+        if (mySocketId) {
+            io.to(mySocketId).emit("friendAccepted", {
+                friendId
+            })
+        }
+
+        if (friendSocketId) {
+            io.to(friendSocketId).emit("friendAccepted", {
+                friendId: myId
+            })
+        }
+
+
         res.json({ success: true })
 
     } catch (error) {
@@ -165,8 +204,25 @@ export const rejectRequests = async (req, res) => {
         await User.findByIdAndUpdate(myId, {
             $pull: { incomingRequests: friendId }
         });
-        res.json({ success: true })
+         // emit to sender 
+        const senderSocketId = userSocketMap[friendId.toString()];
 
+        if (senderSocketId) {
+            io.to(senderSocketId).emit("friendRequestRejected", {
+                friendId: myId.toString()
+            });
+        }
+
+        // emit to receiver 
+        const receiverSocketId = userSocketMap[myId.toString()];
+
+        if (receiverSocketId) {
+            io.to(receiverSocketId).emit("friendRequestRejected", {
+                friendId: friendId.toString()
+            });
+        }
+        res.json({ success: true })
+        
     } catch (error) {
         console.log(error.message)
         res.json({ success: false, message: error.message })

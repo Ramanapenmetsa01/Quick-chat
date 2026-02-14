@@ -32,19 +32,23 @@ export const AuthProvider = ({ children }) => {
     }
 
     // connect socket function to handle socket connection and online users updates
-    const connectSocket = (userData) => {
-        if (!userData || socket?.connected) return;
-        const newSocket = io(backendUrl, {
-            query: {
-                userId: userData._id
-            }
-        })
-        newSocket.connect()
-        setSocket(newSocket)
-        newSocket.on("getOnlineUsers", (userIds) => {
-            setOnlineUsers(userIds)
-        })
-    }
+   const connectSocket = (userData) => {
+    if (!userData || socket?.connected) return;
+
+    const newSocket = io(backendUrl, {
+        query: {
+            userId: userData._id
+        },
+        transports: ["websocket"]
+    });
+
+    setSocket(newSocket);
+
+    newSocket.on("getOnlineUsers", (userIds) => {
+        setOnlineUsers(userIds);
+    });
+};
+
 
     useEffect(() => {
         if (token) {
@@ -102,9 +106,9 @@ export const AuthProvider = ({ children }) => {
                 );
                 // store private key securely
                 sessionStorage.setItem("privateKey", privateKey);
+                axios.defaults.headers.common["token"] = response.data.token;
                 setAuthUser(user);
                 connectSocket(user);
-                axios.defaults.headers.common["token"] = response.data.token;
                 setToken(response.data.token);
                 localStorage.setItem("token", response.data.token);
                 toast.success(response.data.message);

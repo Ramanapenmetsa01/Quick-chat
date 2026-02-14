@@ -1,31 +1,48 @@
 import { createContext, useContext, useEffect, useState } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query"
 import { AuthContext } from "./AuthContext";
 import toast from "react-hot-toast";
 import { encryptMessage, decryptMessage } from "../utils/crypto";
 
-
 export const ChatContext = createContext()
 export const ChatProvider = ({ children }) => {
     const [messages, setMessages] = useState([])
-    const [users, setUsers] = useState([])
     const [selectedUser, setSelectedUser] = useState(null)
-    const [unseenMessages, setUnseenMessages] = useState({})
     const { axios, socket, authUser } = useContext(AuthContext)
+    const queryClient = useQueryClient()
+
+
+useEffect(() => {
+    if (!socket) return;
+    const handleFriendAccepted = (data) => {
+        queryClient.invalidateQueries({
+            queryKey: ["friends"]
+        });
+    };
+    socket.on("friendAccepted", handleFriendAccepted);
+    return () => {
+        socket.off("friendAccepted", handleFriendAccepted);
+    };
+}, [socket, queryClient]);
+
 
     //function to get all users for sidebars
-    const getUsers = async () => {
-        try {
-            const { data } = await axios.get('/api/messages/friendUsers')
-            if (data.success) {
-                setUsers(data.users)
-                setUnseenMessages(data.unseenMessages)
-            } else {
-                toast.error(data.message)
-            }
-        } catch (error) {
-            toast.error(error.message)
+    const fetchUsers = async () => {
+        const { data } = await axios.get("/api/messages/friendUsers")
+        if (!data.success) {
+            throw new Error(data.message)
         }
+        return data
     }
+    const { data } = useQuery({
+        queryKey: ["friends"],
+        queryFn: fetchUsers,
+        enabled: !!authUser, // IMPORTANT FIX
+    })
+
+    const users = data?.users || []
+    const unseenMessages = data?.unseenMessages || {}
+
 
     // function to get messages for selected user
     const getMessages = async (userId) => {
@@ -123,28 +140,41 @@ export const ChatProvider = ({ children }) => {
         socket.on("newMessage", (newMessage) => {
             const privateKey = sessionStorage.getItem("privateKey");
 
-        // decrypt live incoming message
-        if (newMessage.text && newMessage.nonce && privateKey && selectedUser) {
+            // decrypt live incoming message
+            if (newMessage.text && newMessage.nonce && privateKey && selectedUser) {
 
-            const decryptedText = decryptMessage(
-                newMessage.text,
-                newMessage.nonce,
-                selectedUser.publicKey,
-                privateKey
-            );
+                const decryptedText = decryptMessage(
+                    newMessage.text,
+                    newMessage.nonce,
+                    selectedUser.publicKey,
+                    privateKey
+                );
 
-            newMessage.text = decryptedText;
-        }
+                newMessage.text = decryptedText;
+            }
 
             if (selectedUser && newMessage.senderId === selectedUser._id) {
                 newMessage.seen = true
-                
+
                 setMessages(prev => [...prev, newMessage]);
                 axios.put(`/api/messages/mark/${newMessage._id}`)
             } else {
-                setUnseenMessages((prev) => ({
-                    ...prev, [newMessage.senderId]: prev[newMessage.senderId] ? prev[newMessage.senderId] + 1 : 1
-                }))
+                queryClient.setQueryData(["friends"], (oldData) => {
+
+                    if (!oldData) return oldData
+
+                    const updatedUnseen = {
+                        ...oldData.unseenMessages,
+                        [newMessage.senderId]:
+                            (oldData.unseenMessages?.[newMessage.senderId] || 0) + 1
+                    }
+
+                    return {
+                        ...oldData,
+                        unseenMessages: updatedUnseen
+                    }
+                })
+
             }
         })
     }
@@ -162,14 +192,13 @@ export const ChatProvider = ({ children }) => {
         messages,
         users,
         selectedUser,
-        getUsers,
         setMessages,
         sendMessage,
         setSelectedUser,
         unseenMessages,
-        setUnseenMessages,
         getMessages
     }
+
     return (
         <ChatContext.Provider value={value}>
             {children}

@@ -5,7 +5,7 @@ import { AuthContext } from '../../context/AuthContext';
 import toast from 'react-hot-toast';
 
 const AddFriendPage = ({ onClose }) => {
-  const { axios, authUser } = useContext(AuthContext)
+  const { axios, authUser,socket } = useContext(AuthContext)
   const [searchQuery, setSearchQuery] = useState('')
   const [users, setUsers] = useState([])
   const [page, setPage] = useState(1)
@@ -58,6 +58,69 @@ const AddFriendPage = ({ onClose }) => {
     setHasMore(true)
     fetchUsers(1, searchQuery)
   }, [searchQuery])
+
+  useEffect(() => {
+
+  if (!socket) return;
+
+  // When someone sends you request → mark requested
+  socket.on("newFriendRequest", (user) => {
+
+    setRequestedList(prev => {
+      const newSet = new Set(prev);
+      newSet.add(user._id);
+      return newSet;
+    });
+
+  });
+
+  // When someone unsends request → remove requested
+  socket.on("friendRequestRemoved", ({ senderId }) => {
+
+    setRequestedList(prev => {
+      const newSet = new Set(prev);
+      newSet.delete(senderId);
+      return newSet;
+    });
+
+  });
+
+  // When request accepted → move to friends
+  socket.on("friendAccepted", ({ friendId }) => {
+
+    setRequestedList(prev => {
+      const newSet = new Set(prev);
+      newSet.delete(friendId);
+      return newSet;
+    });
+
+    setAddedFriends(prev => {
+      const newSet = new Set(prev);
+      newSet.add(friendId);
+      return newSet;
+    });
+
+  });
+
+  // When request rejected → remove requested
+socket.on("friendRequestRejected", ({ friendId }) => {
+  setRequestedList(prev => {
+    const newSet = new Set(prev);
+    newSet.delete(friendId);
+    return newSet;
+
+  });
+});
+
+  return () => {
+
+    socket.off("newFriendRequest");
+    socket.off("friendRequestRemoved");
+    socket.off("friendAccepted");
+    socket.off("friendRequestRejected");
+
+  };
+}, [socket]);
 
   const handleScroll = (e) => {
     const { scrollTop, scrollHeight, clientHeight } = e.target

@@ -6,19 +6,19 @@ import { useNavigate } from 'react-router-dom';
 import { AuthContext } from '../../context/AuthContext';
 import AddFriendPage from '../pages/AddFriendPage';
 import { ChatContext } from '../../context/chatContext';
+import { useQueryClient } from "@tanstack/react-query"
+
 
 const Sidebar = () => {
-  const { getUsers, users, selectedUser, setSelectedUser, unseenMessages, setUnseenMessages } = useContext(ChatContext)
+  const { getUsers, users, selectedUser, setSelectedUser, unseenMessages } = useContext(ChatContext)
   const { logout, onlineUsers } = useContext(AuthContext)
   const navigate = useNavigate();
   const [open, setOpen] = useState(false);
   const [showAddFriend, setShowAddFriend] = useState(false);
   const [input, setInput] = useState("")
   const filteredUsers = input ? users.filter((user) => user.fullName.toLowerCase().includes(input.toLowerCase())) : users;
+const queryClient = useQueryClient()
 
-  useEffect(() => {
-    getUsers()
-  }, [onlineUsers])
   const menuRef = useRef();
 
   useEffect(() => {
@@ -106,7 +106,22 @@ const Sidebar = () => {
           )}
 
           {filteredUsers.map((user, index) => (
-            <div onClick={()=>{ setSelectedUser(user); setUnseenMessages(prev=>({...prev,[user._id]:0}))}}
+            <div onClick={() => {
+              setSelectedUser(user);
+
+              queryClient.setQueryData(["friends"], (oldData) => {
+                if (!oldData) return oldData
+
+                return {
+                  ...oldData,
+                  unseenMessages: {
+                    ...oldData.unseenMessages,
+                    [user._id]: 0
+                  }
+                }
+              })
+            }}
+
               key={index} className={`relative flex items-center gap-2 p-2 pl-4 rounded cursor-pointer max-sm:text-sm ${selectedUser?._id === user?._id && 'bg-[#282142]/50'}`}>
               {user.profilePic ? (
                 <img
